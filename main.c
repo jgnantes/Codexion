@@ -12,36 +12,41 @@
 
 #include "codexion.h"
 
+void	print_log(t_coder *coder, char *message)
+{
+	pthread_mutex_lock(&coder->data->log_mutex);
+	printf("%ld Coder %d %s\n",
+		get_time_ms() - coder->data->start_time,
+		coder->id,
+		message);
+	pthread_mutex_unlock(&coder->data->log_mutex);
+}
+
 void	*print_test(void *arg)
 {
-	t_coder	*coders;
+	t_coder	*coder;
 
-	coders = (t_coder *)arg;
-	printf("Coder %d started\n", coders->id);
-	sleep(1);
-	printf("Coder %d continues\n", coders->id);
+	coder = (t_coder *)arg;
+	print_log(coder, "is compiling");
+	msleep(coder->data->config->time_to_compile);
+	print_log(coder, "is debugging");
+	msleep(coder->data->config->time_to_debug);
+	print_log(coder, "is refactoring");
+	msleep(coder->data->config->time_to_refactor);
 	return (NULL);
 }
 
 int	main(int argc, char **argv)
 {
-	pthread_t	*threads;
-	t_coder		*coders;
-	t_data		data;
-	int			n;
+	t_sim	sim;
 
-	if (argc != 2)
+	if (init_config(&sim, argc, argv))
 		return (1);
-	n = atoi(argv[1]);
-	if (n <= 0)
+	if (init_simulation(&sim))
 		return (1);
-	threads = malloc(sizeof(pthread_t) * n);
-	coders = malloc(sizeof(t_coder) * n);
-	if (!threads || !coders)
-		return (free_threads(threads, coders), 1);
-	pthread_mutex_init(&data.log_mutex, NULL);
-	allocate(threads, coders, n, print_test);
-	finish_thread(threads, coders, n);
-	pthread_mutex_destroy(&data.log_mutex);
+	create_threads(&sim, print_test);
+	finish_thread(&sim);
+	pthread_mutex_destroy(&sim.data.log_mutex);
+	free_threads(&sim);
 	return (0);
 }
