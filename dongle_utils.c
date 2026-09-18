@@ -6,37 +6,61 @@
 /*   By: jnantes- <jnantes-@student.42.rio>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/16 20:41:04 by jnantes-          #+#    #+#             */
-/*   Updated: 2026/09/16 20:58:03 by jnantes-         ###   ########.fr       */
+/*   Updated: 2026/09/18 19:01:13 by jnantes-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
 
-void	take_dongles(t_coder *coder)
+int	lock_dongle(t_coder *coder, t_dongle *dongle)
+{
+	pthread_mutex_lock(&dongle->mutex);
+	if (is_stopped(coder->data))
+	{
+		pthread_mutex_unlock(&dongle->mutex);
+		return (1);
+	}
+	print_log(coder, "has taken a dongle");
+	return (0);
+}
+
+void	get_dongle_order(t_coder *coder, t_dongle **first, t_dongle **second)
+{
+	if (coder->left->id < coder->right->id)
+	{
+		*first = coder->left;
+		*second = coder->right;
+	}
+	else
+	{
+		*first = coder->right;
+		*second = coder->left;
+	}
+}
+
+int	take_dongles(t_coder *coder)
 {
 	t_dongle	*first;
 	t_dongle	*second;
 
 	if (coder->left == coder->right)
 	{
-		pthread_mutex_lock(&coder->left->mutex);
-		print_log(coder, "has taken a dongle");
-		return ;
+		if (lock_dongle(coder, coder->left))
+			return (1);
+		while (!is_stopped(coder->data))
+			msleep(1);
+		pthread_mutex_unlock(&coder->left->mutex);
+		return (1);
 	}
-	if (coder->left->id < coder->right->id)
+	get_dongle_order(coder, &first, &second);
+	if (lock_dongle(coder, first))
+		return (1);
+	if (lock_dongle(coder, second))
 	{
-		first = coder->left;
-		second = coder->right;
+		pthread_mutex_unlock(&first->mutex);
+		return (1);
 	}
-	else
-	{
-		first = coder->right;
-		second = coder->left;
-	}
-	pthread_mutex_lock(&first->mutex);
-	print_log(coder, "has taken a dongle");
-	pthread_mutex_lock(&second->mutex);
-	print_log(coder, "has taken a dongle");
+	return (0);
 }
 
 void	release_dongles(t_coder *coder)

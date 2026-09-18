@@ -6,7 +6,7 @@
 /*   By: jnantes- <jnantes-@student.42.rio>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/13 16:17:03 by jnantes-          #+#    #+#             */
-/*   Updated: 2026/09/16 23:18:49 by jnantes-         ###   ########.fr       */
+/*   Updated: 2026/09/18 19:08:18 by jnantes-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,6 +58,7 @@ typedef struct s_coder
 typedef struct s_sim
 {
 	pthread_t	*threads;
+	pthread_t	monitor;
 	t_coder		*coders;
 	t_dongle	*dongles;
 	t_data		data;
@@ -69,10 +70,7 @@ void	create_threads(t_sim *sim, void *f(void *));
 void	finish_thread(t_sim *sim);
 void	free_threads(t_sim *sim);
 void	destroy_mutexes(t_sim *sim);
-
-/*dongle utils*/
-void	take_dongles(t_coder *coder);
-void	release_dongles(t_coder *coder);
+void	*monitor_routine(void *arg);
 
 /*time utils*/
 long	get_time_ms(void);
@@ -83,11 +81,22 @@ long	get_last_compile_start(t_coder *coder);
 /*initialization utils*/
 int		init_config(t_sim *sim, int argc, char **argv);
 int		init_simulation(t_sim *sim);
-
-/*parsing utils*/
 int		is_digit(char c);
 int		parsing_atoi(char *arg);
 
 /*print utils*/
 void	print_log(t_coder *coder, char *message);
 void	*print_output(void *arg);
+int		compile_step(t_coder *coder);
+
+/*dongle utils*/
+int		take_dongles(t_coder *coder);
+void	get_dongle_order(t_coder *coder, t_dongle **first, t_dongle **second);
+int		lock_dongle(t_coder *coder, t_dongle *dongle);
+void	release_dongles(t_coder *coder);
+
+/*monitor utils*/
+int		is_stopped(t_data *data);
+void	set_stop(t_data *data);
+int		check_burnout(t_sim *sim);
+int		all_coders_finished(t_sim *sim);

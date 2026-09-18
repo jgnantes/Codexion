@@ -6,7 +6,7 @@
 /*   By: jnantes- <jnantes-@student.42.rio>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/14 21:57:25 by jnantes-          #+#    #+#             */
-/*   Updated: 2026/09/16 23:01:16 by jnantes-         ###   ########.fr       */
+/*   Updated: 2026/09/18 18:12:23 by jnantes-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,4 +60,30 @@ int	init_simulation(t_sim *sim)
 	sim->data.start_time = get_time_ms();
 	sim->data.config = &sim->config;
 	return (0);
+}
+
+int	is_digit(char c)
+{
+	return (c >= '0' && c <= '9');
+}
+
+int	parsing_atoi(char *arg)
+{
+	int		i;
+	long	nbr;
+
+	i = 0;
+	nbr = 0;
+	if (!arg[0])
+		return (-1);
+	while (arg[i])
+	{
+		if (!is_digit(arg[i]))
+			return (-1);
+		nbr = (nbr * 10) + (arg[i] - '0');
+		if (nbr > INT_MAX)
+			return (-1);
+		i++;
+	}
+	return ((int)nbr);
 }

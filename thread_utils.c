@@ -6,7 +6,7 @@
 /*   By: jnantes- <jnantes-@student.42.rio>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/13 20:04:48 by jnantes-          #+#    #+#             */
-/*   Updated: 2026/09/16 23:05:31 by jnantes-         ###   ########.fr       */
+/*   Updated: 2026/09/18 19:08:39 by jnantes-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,6 +40,7 @@ void	finish_thread(t_sim *sim)
 		pthread_join(sim->threads[i], NULL);
 		i++;
 	}
+	pthread_join(sim->monitor, NULL);
 }
 
 void	free_threads(t_sim *sim)
