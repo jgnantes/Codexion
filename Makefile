@@ -1,5 +1,5 @@
 NAME = codexion
-CC = gcc
+CC = cc
 CFLAGS = -Wall -Wextra -Werror -pthread
 SRC = main.c src/dongle_utils.c src/heap_utils.c src/monitor_utils.c \
 	src/print_utils.c src/request_utils.c src/scheduler_utils.c \

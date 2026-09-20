@@ -17,6 +17,90 @@ The project focuses on thread synchronization, mutex-protected shared state,
 condition variables, cooldown handling, and FIFO/EDF arbitration through a
 custom heap-based priority queue.
 
+### Scheduling
+
+Each dongle owns its own request queue. Requests store:
+
+- the requesting coder;
+- arrival time;
+- deadline, computed as `last_compile_start + time_to_burnout`.
+
+The queue is implemented as a custom binary heap:
+
+- `fifo` prioritizes the earliest arrival time;
+- `edf` prioritizes the earliest burnout deadline;
+- deterministic tie-breakers use arrival time and coder id.
+
+### Blocking Cases Handled
+
+**Deadlock prevention:**
+Coders acquire dongles in a deterministic order by dongle id. This avoids a
+circular wait where every coder holds one dongle while waiting forever for the
+next one.
+
+**Single coder case:**
+With one coder, there is only one dongle. The coder takes it, cannot compile
+because two dongles are required, and eventually burns out.
+
+**Dongle cooldown:**
+Each dongle stores `cooldown_until`. When released, the dongle cannot be reused
+until the cooldown timestamp has passed.
+
+**Starvation prevention:**
+Dongle requests are arbitrated through a heap queue using FIFO or EDF. Under EDF,
+coders closer to burnout are prioritized by deadline when requesting a dongle.
+
+**Precise burnout detection:**
+A monitor thread checks each coder's last compile start time and stops the
+simulation when a coder exceeds `time_to_burnout`.
+
+**Log serialization:**
+All output is protected by `log_mutex`, so state messages do not interleave.
+
+**Shutdown:**
+The shared stop flag is protected by `state_mutex`. When stopping, the monitor
+wakes all dongle queues with condition-variable broadcasts so blocked coders can
+exit.
+
+### Thread Synchronization Mechanisms
+
+`pthread_mutex_t` is used for:
+
+- `log_mutex`: serializes output.
+- `state_mutex`: protects `stop`, `compile_count`, and `last_compile_start`.
+- each dongle mutex: protects physical dongle ownership and cooldown state.
+- each queue mutex: protects heap requests and queue size.
+
+`pthread_cond_t` is used for:
+
+- each dongle queue condition variable, allowing coders to sleep until queue
+  state changes instead of busy-waiting.
+
+Coders communicate only through shared synchronized state. They do not directly
+inspect or signal each other. The monitor performs global shutdown by setting
+the shared stop flag and broadcasting to every queue.
+
+Race conditions are avoided by reading and writing shared timestamps, counters,
+stop state, queue contents, and logs only while holding the appropriate mutex.
+
+### Project Layout
+
+```text
+Makefile
+main.c
+src/codexion.h
+src/dongle_utils.c
+src/heap_utils.c
+src/monitor_utils.c
+src/print_utils.c
+src/request_utils.c
+src/scheduler_utils.c
+src/startup_utils.c
+src/state_utils.c
+src/thread_utils.c
+src/time_utils.c
+```
+
 ## Instructions
 
 Build the project from the repository root:
@@ -54,97 +138,6 @@ Useful Makefile rules:
 make clean
 make fclean
 make re
-```
-
-## Scheduling
-
-Each dongle owns its own request queue. Requests store:
-
-- the requesting coder;
-- arrival time;
-- deadline, computed as `last_compile_start + time_to_burnout`.
-
-The queue is implemented as a custom binary heap:
-
-- `fifo` prioritizes the earliest arrival time;
-- `edf` prioritizes the earliest burnout deadline;
-- deterministic tie-breakers use arrival time and coder id.
-
-## Blocking Cases Handled
-
-Deadlock prevention:
-
-Coders acquire dongles in a deterministic order by dongle id. This avoids a
-circular wait where every coder holds one dongle while waiting forever for the
-next one.
-
-Single coder case:
-
-With one coder, there is only one dongle. The coder takes it, cannot compile
-because two dongles are required, and eventually burns out.
-
-Dongle cooldown:
-
-Each dongle stores `cooldown_until`. When released, the dongle cannot be reused
-until the cooldown timestamp has passed.
-
-Starvation prevention:
-
-Dongle requests are arbitrated through a heap queue using FIFO or EDF. Under EDF,
-coders closer to burnout are prioritized by deadline when requesting a dongle.
-
-Precise burnout detection:
-
-A monitor thread checks each coder's last compile start time and stops the
-simulation when a coder exceeds `time_to_burnout`.
-
-Log serialization:
-
-All output is protected by `log_mutex`, so state messages do not interleave.
-
-Shutdown:
-
-The shared stop flag is protected by `state_mutex`. When stopping, the monitor
-wakes all dongle queues with condition-variable broadcasts so blocked coders can
-exit.
-
-## Thread Synchronization Mechanisms
-
-`pthread_mutex_t` is used for:
-
-- `log_mutex`: serializes output.
-- `state_mutex`: protects `stop`, `compile_count`, and `last_compile_start`.
-- each dongle mutex: protects physical dongle ownership and cooldown state.
-- each queue mutex: protects heap requests and queue size.
-
-`pthread_cond_t` is used for:
-
-- each dongle queue condition variable, allowing coders to sleep until queue
-  state changes instead of busy-waiting.
-
-Coders communicate only through shared synchronized state. They do not directly
-inspect or signal each other. The monitor performs global shutdown by setting
-the shared stop flag and broadcasting to every queue.
-
-Race conditions are avoided by reading and writing shared timestamps, counters,
-stop state, queue contents, and logs only while holding the appropriate mutex.
-
-## Project Layout
-
-```text
-Makefile
-main.c
-src/codexion.h
-src/dongle_utils.c
-src/heap_utils.c
-src/monitor_utils.c
-src/print_utils.c
-src/request_utils.c
-src/scheduler_utils.c
-src/startup_utils.c
-src/state_utils.c
-src/thread_utils.c
-src/time_utils.c
 ```
 
 ## Resources
