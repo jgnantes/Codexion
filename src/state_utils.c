@@ -1,29 +1,16 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   time_utils.c                                       :+:      :+:    :+:   */
+/*   state_utils.c                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: jnantes- <jnantes-@student.42.rio>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/09/14 21:18:19 by jnantes-          #+#    #+#             */
-/*   Updated: 2026/09/16 23:16:23 by jnantes-         ###   ########.fr       */
+/*   Created: 2026/09/19 15:17:55 by jnantes-          #+#    #+#             */
+/*   Updated: 2026/09/19 15:19:15 by jnantes-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
-
-long	get_time_ms(void)
-{
-	struct timespec	time;
-
-	clock_gettime(CLOCK_MONOTONIC, &time);
-	return ((time.tv_sec * 1000) + (time.tv_nsec / 1000000));
-}
-
-void	msleep(long milliseconds)
-{
-	usleep(milliseconds * 1000);
-}
 
 void	set_last_compile_start(t_coder *coder)
 {
@@ -40,4 +27,21 @@ long	get_last_compile_start(t_coder *coder)
 	last_compile_start = coder->last_compile_start;
 	pthread_mutex_unlock(&coder->data->state_mutex);
 	return (last_compile_start);
+}
+
+void	increment_compile_count(t_coder *coder)
+{
+	pthread_mutex_lock(&coder->data->state_mutex);
+	coder->compile_count++;
+	pthread_mutex_unlock(&coder->data->state_mutex);
+}
+
+int	get_compile_count(t_coder *coder)
+{
+	int	compile_count;
+
+	pthread_mutex_lock(&coder->data->state_mutex);
+	compile_count = coder->compile_count;
+	pthread_mutex_unlock(&coder->data->state_mutex);
+	return (compile_count);
 }

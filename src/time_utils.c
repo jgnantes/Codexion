@@ -1,29 +1,26 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   main.c                                             :+:      :+:    :+:   */
+/*   time_utils.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: jnantes- <jnantes-@student.42.rio>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/09/07 15:13:13 by jnantes-          #+#    #+#             */
-/*   Updated: 2026/09/19 21:39:04 by jnantes-         ###   ########.fr       */
+/*   Created: 2026/09/14 21:18:19 by jnantes-          #+#    #+#             */
+/*   Updated: 2026/09/19 15:18:18 by jnantes-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
 
-int	main(int argc, char **argv)
+long	get_time_ms(void)
 {
-	t_sim	sim;
+	struct timespec	time;
 
-	memset(&sim, 0, sizeof(t_sim));
-	if (init_config(&sim, argc, argv))
-		return (1);
-	if (init_simulation(&sim))
-		return (1);
-	create_threads(&sim, print_output);
-	pthread_create(&sim.monitor, NULL, monitor_routine, &sim);
-	finish_thread(&sim);
-	free_threads(&sim);
-	return (0);
+	clock_gettime(CLOCK_MONOTONIC, &time);
+	return ((time.tv_sec * 1000) + (time.tv_nsec / 1000000));
+}
+
+void	msleep(long milliseconds)
+{
+	usleep(milliseconds * 1000);
 }

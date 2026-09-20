@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   init_utils.c                                       :+:      :+:    :+:   */
+/*   startup_utils.c                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: jnantes- <jnantes-@student.42.rio>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/14 21:57:25 by jnantes-          #+#    #+#             */
-/*   Updated: 2026/09/18 18:12:23 by jnantes-         ###   ########.fr       */
+/*   Updated: 2026/09/19 21:37:55 by jnantes-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,13 +40,14 @@ int	init_config(t_sim *sim, int argc, char **argv)
 
 int	init_simulation(t_sim *sim)
 {
-	int i;
+	int	i;
 
 	sim->threads = malloc(sizeof(pthread_t) * sim->config.nbr_coders);
 	sim->coders = malloc(sizeof(t_coder) * sim->config.nbr_coders);
 	sim->dongles = malloc(sizeof(t_dongle) * sim->config.nbr_coders);
 	if (!sim->threads || !sim->coders || !sim->dongles)
-		return (free_threads(sim), 1);
+		return (free_threads(sim));
+	memset(sim->dongles, 0, sizeof(t_dongle) * sim->config.nbr_coders);
 	pthread_mutex_init(&sim->data.log_mutex, NULL);
 	pthread_mutex_init(&sim->data.state_mutex, NULL);
 	sim->data.stop = 0;
@@ -54,7 +55,11 @@ int	init_simulation(t_sim *sim)
 	while (i < sim->config.nbr_coders)
 	{
 		sim->dongles[i].id = i + 1;
+		sim->dongles[i].cooldown_until = 0;
 		pthread_mutex_init(&sim->dongles[i].mutex, NULL);
+		pthread_cond_init(&sim->dongles[i].cond, NULL);
+		if (init_request_queue(&sim->dongles[i].queue, sim->config.nbr_coders))
+			return (free_threads(sim));
 		i++;
 	}
 	sim->data.start_time = get_time_ms();

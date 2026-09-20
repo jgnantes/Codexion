@@ -6,7 +6,7 @@
 /*   By: jnantes- <jnantes-@student.42.rio>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/13 20:04:48 by jnantes-          #+#    #+#             */
-/*   Updated: 2026/09/18 19:08:39 by jnantes-         ###   ########.fr       */
+/*   Updated: 2026/09/19 20:47:30 by jnantes-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,28 +38,31 @@ void	finish_thread(t_sim *sim)
 	while (i < sim->config.nbr_coders)
 	{
 		pthread_join(sim->threads[i], NULL);
+		pthread_mutex_destroy(&sim->dongles[i].mutex);
+		pthread_cond_destroy(&sim->dongles[i].cond);
+		pthread_mutex_destroy(&sim->dongles[i].queue.mutex);
+		pthread_cond_destroy(&sim->dongles[i].queue.cond);
 		i++;
 	}
 	pthread_join(sim->monitor, NULL);
+	pthread_mutex_destroy(&sim->data.state_mutex);
+	pthread_mutex_destroy(&sim->data.log_mutex);
 }
 
-void	free_threads(t_sim *sim)
-{
-	free(sim->threads);
-	free(sim->coders);
-	free(sim->dongles);
-}
-
-void	destroy_mutexes(t_sim *sim)
+int	free_threads(t_sim *sim)
 {
 	int	i;
 
+	if (!sim)
+		return (0);
+	free(sim->threads);
+	free(sim->coders);
 	i = 0;
 	while (i < sim->config.nbr_coders)
 	{
-		pthread_mutex_destroy(&sim->dongles[i].mutex);
+		free(sim->dongles[i].queue.items);
 		i++;
 	}
-	pthread_mutex_destroy(&sim->data.state_mutex);
-	pthread_mutex_destroy(&sim->data.log_mutex);
+	free(sim->dongles);
+	return (1);
 }

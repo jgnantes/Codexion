@@ -6,7 +6,7 @@
 /*   By: jnantes- <jnantes-@student.42.rio>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/18 18:30:45 by jnantes-          #+#    #+#             */
-/*   Updated: 2026/09/18 19:07:41 by jnantes-         ###   ########.fr       */
+/*   Updated: 2026/09/19 21:47:56 by jnantes-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,7 @@ void	*monitor_routine(void *arg)
 	{
 		if (all_coders_finished(sim))
 		{
-			set_stop(&sim->data);
+			set_stop(sim);
 			return (NULL);
 		}
 		if (check_burnout(sim))
@@ -41,11 +41,21 @@ int	is_stopped(t_data *data)
 	return (stop);
 }
 
-void	set_stop(t_data *data)
+void	set_stop(t_sim *sim)
 {
-	pthread_mutex_lock(&data->state_mutex);
-	data->stop = 1;
-	pthread_mutex_unlock(&data->state_mutex);
+	int	i;
+
+	pthread_mutex_lock(&sim->data.state_mutex);
+	sim->data.stop = 1;
+	pthread_mutex_unlock(&sim->data.state_mutex);
+	i = 0;
+	while (i < sim->config.nbr_coders)
+	{
+		pthread_mutex_lock(&sim->dongles[i].queue.mutex);
+		pthread_cond_broadcast(&sim->dongles[i].queue.cond);
+		pthread_mutex_unlock(&sim->dongles[i].queue.mutex);
+		i++;
+	}
 }
 
 int	check_burnout(t_sim *sim)
@@ -61,7 +71,7 @@ int	check_burnout(t_sim *sim)
 		last = get_last_compile_start(&sim->coders[i]);
 		if (now - last > sim->config.time_to_burnout)
 		{
-			set_stop(&sim->data);
+			set_stop(sim);
 			print_log(&sim->coders[i], "burned out");
 			return (1);
 		}
@@ -77,7 +87,8 @@ int	all_coders_finished(t_sim *sim)
 	i = 0;
 	while (i < sim->config.nbr_coders)
 	{
-		if (sim->coders[i].compile_count < sim->config.nbr_compiles_required)
+		if (get_compile_count(
+				&sim->coders[i]) < sim->config.nbr_compiles_required)
 			return (0);
 		i++;
 	}
